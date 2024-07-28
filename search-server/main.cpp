@@ -119,13 +119,13 @@ private:
     Query ParseQuery(const string& text) const {
         Query query_set;
         for (const string& word : SplitIntoWordsNoStop(text)) {
-            if (word[0] != '-')
+            if (word[0] == '-')
             {
-                query_set.query_words.insert(word);
+                query_set.minus_words.insert(word.substr(1));
             }
             else
             {
-                query_set.minus_words.insert(word.substr(1));
+                query_set.query_words.insert(word);
             }
         }
         return query_set;
