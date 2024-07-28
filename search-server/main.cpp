@@ -70,9 +70,10 @@ public:
 
     void AddDocument(int document_id, const string& document) {
         const vector<string> words = SplitIntoWordsNoStop(document);
+        double base_tf = 1./words.size();
         for(string word : words)
         {
-            (docs_[word])[document_id] += (1./words.size());
+            (docs_[word])[document_id] += base_tf;
         }
     }
 
@@ -91,9 +92,9 @@ public:
     }
 
     int GetNumberOfDocs() {
-    document_count_ = ReadLineWithNumber();
-    return document_count_;
-}
+        document_count_ = ReadLineWithNumber();
+        return document_count_;
+    }
 
 private:
     map<string, map<int, double>> docs_;
@@ -118,14 +119,20 @@ private:
     Query ParseQuery(const string& text) const {
         Query query_set;
         for (const string& word : SplitIntoWordsNoStop(text)) {
-            if (word[0] == '-')
+            if (word[0] != '-')
+            {
+                query_set.query_words.insert(word);
+            }
+            else
             {
                 query_set.minus_words.insert(word.substr(1));
-                query_set.query_words.insert(word.substr(1));
             }
-            query_set.query_words.insert(word);
         }
         return query_set;
+    }
+
+    double ComputeIDF (const double& number_of_docs) const {
+        return log(static_cast<double>(document_count_)/number_of_docs);
     }
 
     vector<Document> FindAllDocuments(const Query& query_set) const {
@@ -135,11 +142,9 @@ private:
         {
             if(docs_.count(word))
             {
-                //Calculating TF-IDF for every word from query
                 for(auto [id, tf_idf] : docs_.at(word))
                 {
-                    tf_idf *= log(static_cast<double>(document_count_)/static_cast<double>(docs_.at(word).size()));
-                    //Summing relevance
+                    tf_idf *= ComputeIDF(static_cast<double>(docs_.at(word).size()));
                     pre_matched_documents[id] += tf_idf;
                 }
             }
@@ -155,12 +160,9 @@ private:
                 }
             }
         }
-        Document doc;
         for(auto [id, value]: pre_matched_documents)
         {
-            doc.id = id;
-            doc.relevance = value;
-            matched_documents.push_back(doc);
+            matched_documents.push_back({id, value});
         }
         return matched_documents;
     }
