@@ -1,5 +1,3 @@
-// Ответ: 271
-
 #include <algorithm>
 #include <iostream>
 #include <set>
