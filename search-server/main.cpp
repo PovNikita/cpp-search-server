@@ -1,8 +1,4 @@
-// Решите загадку: Сколько чисел от 1 до 1000 содержат как минимум одну цифру 3?
-// Напишите ответ здесь: 271
-
-// Закомитьте изменения и отправьте их в свой репозиторий.
-
+// Ответ: 271
 
 #include <algorithm>
 #include <iostream>
@@ -131,8 +127,9 @@ private:
         return query_set;
     }
 
-    double ComputeIDF (const double& number_of_docs) const {
-        return log(static_cast<double>(document_count_)/number_of_docs);
+    double ComputeIDF (const string& word) const {
+
+        return log(static_cast<double>(document_count_)/static_cast<double>(docs_.at(word).size()));
     }
 
     vector<Document> FindAllDocuments(const Query& query_set) const {
@@ -142,10 +139,10 @@ private:
         {
             if(docs_.count(word))
             {
-                for(auto [id, tf_idf] : docs_.at(word))
+                double idf = ComputeIDF(word);
+                for(auto [id, tf] : docs_.at(word))
                 {
-                    tf_idf *= ComputeIDF(static_cast<double>(docs_.at(word).size()));
-                    pre_matched_documents[id] += tf_idf;
+                    pre_matched_documents[id] += tf * idf;
                 }
             }
         }
