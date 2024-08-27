@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 #include <stdexcept>
+#include <numeric>
 
 using namespace std;
 
@@ -83,7 +84,15 @@ public:
     template <typename StringContainer>
     explicit SearchServer(const StringContainer& stop_words)
         : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {
-            CheckStopWords();
+        for(const string& word : stop_words_)
+        {
+            if(!IsValidWord(word))
+            {
+                string error_mes = "Word isn't correct. Word: "s;
+                error_mes += word;
+                throw invalid_argument(error_mes);
+            }
+        }
     }
 
     explicit SearchServer(const string& stop_words_text)
@@ -112,9 +121,7 @@ public:
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query,
                                       DocumentPredicate document_predicate) const {
-        Query query;
-        ParseQuery(raw_query, query);
-
+        const Query query = ParseQuery(raw_query);
         auto matched_documents =  FindAllDocuments(query, document_predicate);
 
         sort(matched_documents.begin(), matched_documents.end(),
@@ -152,8 +159,7 @@ public:
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query,
                                     int document_id) const {
-        Query query;
-        ParseQuery(raw_query, query);
+        const Query query = ParseQuery(raw_query);
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
@@ -201,19 +207,6 @@ private:
         });
     }
 
-    void CheckStopWords(void)
-    {
-        for(const string& word : stop_words_)
-        {
-            if(!IsValidWord(word))
-            {
-                string error_mes = "Word isn't correct. Word: "s;
-                error_mes += word;
-                throw invalid_argument(error_mes);
-            }
-        }
-    }
-
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
@@ -237,9 +230,7 @@ private:
             return 0;
         }
         int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
+        rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
     }
 
@@ -249,47 +240,28 @@ private:
         bool is_stop;
     };
 
-    [[nodiscard]] bool IsCorrectMinusWord(const string& text) const{
-        bool word_is_ok = false;
-        if(text.size() > 1)
-        {
-            if(text[1] != '-')
-            {
-                word_is_ok = true;
-                return word_is_ok;
-            }
-            else 
-            {
-                return word_is_ok;
-            }
-        }
-        else
-        {
-            return word_is_ok;
-        }
-    }
-
-    void ParseQueryWord(string text, QueryWord& query_word) const {
+    QueryWord ParseQueryWord(string text) const {
+        QueryWord query_word;
         bool is_minus = false;
         // Word shouldn't be empty
         if(IsValidWord(text))
         {
             if (text[0] == '-') {
-                if(IsCorrectMinusWord(text)){
-                    is_minus = true;
-                    text = text.substr(1);
-                    query_word = {text, is_minus, IsStopWord(text)};
-                }
-                else
+                is_minus = true;
+                text = text.substr(1);
+                if(text.empty() || text[0] == '-' || !IsValidWord(text))
                 {
                     string error_mes = "Minus word isn't correct. Word: "s;
-                    error_mes += text;
+                    error_mes += ('-' + text);
                     throw invalid_argument(error_mes);
+                }
+                else {
+                    return {text, is_minus, IsStopWord(text)};
                 }
             }
             else
             {
-                query_word = {text, is_minus, IsStopWord(text)};
+                return {text, is_minus, IsStopWord(text)};
             }
         }
         else{
@@ -297,6 +269,7 @@ private:
             error_mes += text;
             throw invalid_argument(error_mes);
         }
+        return query_word;
     }
 
     struct Query {
@@ -304,10 +277,10 @@ private:
         set<string> minus_words;
     };
 
-    void ParseQuery(const string& text, Query& query) const {
+    Query ParseQuery(const string& text) const {
+        Query query;
         for (const string& word : SplitIntoWords(text)) {
-            QueryWord query_word;
-            ParseQueryWord(word, query_word);
+            const QueryWord query_word = ParseQueryWord(word);
                 if (!query_word.is_stop) {
                     if (query_word.is_minus) {
                         query.minus_words.insert(query_word.data);
@@ -316,6 +289,7 @@ private:
                     }
                 }
         }
+        return query;
     }
 
     // Existence required
