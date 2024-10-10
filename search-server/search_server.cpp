@@ -10,8 +10,6 @@ SearchServer::SearchServer(const string& stop_words_text)
 {
 }
 
-
-
 void SearchServer::AddDocument(int document_id, const string& document, DocumentStatus status,
                     const vector<int>& ratings) {
     vector<string> words;
@@ -81,6 +79,13 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& 
     return true;
 }
 
+bool SearchServer::IsValidWord(const std::string &word)
+{
+    return none_of(word.begin(), word.end(), [](char c){
+        return c >= '\0' && c < ' ';
+    });
+}
+
 bool SearchServer::IsStopWord(const string& word) const {
     return stop_words_.count(word) > 0;
 }
@@ -97,6 +102,15 @@ void SearchServer::SplitIntoWordsNoStop(const string& text, vector<string>& word
             words.push_back(word);
         }
     }
+}
+
+int SearchServer::ComputeAverageRating(const std::vector<int>& ratings) {
+    if (ratings.empty()) {
+        return 0;
+    }
+    int rating_sum = 0;
+    rating_sum = std::accumulate(ratings.begin(), ratings.end(), 0);
+    return rating_sum / static_cast<int>(ratings.size());
 }
 
 SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {

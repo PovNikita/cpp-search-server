@@ -21,5 +21,13 @@ vector<Document> RequestQueue::AddFindRequest(const string& raw_query) {
 }
 
 int RequestQueue::GetNoResultRequests() const {
-    return NoResultsRequests_;
+    return no_results_requests_;
+}
+
+void RequestQueue::AddRequestQuery(bool is_empty_request)
+{
+    QueryResult request;
+    request.time_ = current_time_in_minutes_;
+    request.is_empty_request_ = is_empty_request;
+    requests_.push_back(request);
 }
